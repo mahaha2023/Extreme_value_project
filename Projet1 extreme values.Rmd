@@ -1,0 +1,170 @@
+---
+title: "Projet extreme values"
+author: "MAHAMAT HASSAN ISSA"
+date: "2023-07-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(extRemes)
+data("ftcanmax")
+str(ftcanmax)
+summary(ftcanmax)
+```
+# Précipitations maximales annuelles (inches) pour un pluviomètre à Fort Collins, Colorado à partir de 1900 jusqu'en 1999. La variable d'intérêt est la quantité maximale annuelle de précipitations en inches :Préc.
+
+```{r}
+x=ftcanmax$Prec
+x
+length(x)
+hist=hist(ftcanmax$Prec,freq=F)
+# on voit la répartition de notre echantillon sur l'histogramme
+```
+
+## I) GEV:La distribution généralisée des valeurs extrêmes
+
+```{r pressure, echo=FALSE}
+plot(ftcanmax$Prec,col = "blue",pch=16)
+```
+
+# On voit la distribution des points sur l'axe des abscisses et sur l'axe des ordonnées(ftcanmax$Prec).On remarque sur l'axe des ordonnées qu'il ya trois points qui sont situés en dessus de 400 et les autres points en dessous de 400.
+```{r}
+# 1)using MLE( méthode de maximum de vraissemblance)
+FitxMle=fevd(x,type="GEV",method="MLE")
+FitxMle
+plot(FitxMle)
+```
+
+# Sur le graphique en bas à droite,on voit que tous les points sont dans l'intervalle de confiance et assez bien alignés sur la courbe, on a un bon ajustement de notre modèle à nos données. sur les graphiques en haut à gauche et en bas à gauche on voit un bon ajustement de notre modèle à nos données à part quelques points sous estimés.
+```{r}
+ci(FitxMle,type="parameter")
+```
+
+# On voit que sur l'intevalle de confiance à 95% que gamma pourrait être nul, donc on va le forcer à être dans Gumbel.
+```{r}
+FitxGumbelMle=fevd(x,type="Gumbel",method="MLE")
+FitxGumbelMle
+plot(FitxGumbelMle)
+```
+
+# Sur le graphique en bas à droite,on remarque que quelques points  sortent de l'intervalle de confiance. Sur les graphiques en haut à gauche les points sont plus sous estimés par le modèle car Gumbel a donné moins de poid dans la queue de distribution.
+```{r}
+ci(FitxGumbelMle,type="parameter")
+```
+
+# Conclusion:parmi ces deux modèles, dans ce cas je préférerais choisir le modèle de Frechet que Gumbel,car dans le modèle de Frechet tous les points sont dans l'intervalle de confiance et aussi avec valeurs de AIC et BIC par contre pour le modèle de Gumbel on voit que quelques points sortent de l'intervalle de confiance.
+```{r}
+# 2) on utilise L-moments(méthode de moment)
+FitxMoments=fevd(x,type="GEV",method="Lmoments")
+FitxMoments
+ci(FitxMoments,type="parameter")
+plot(FitxMoments)
+```
+
+# Le résultat est presque meme que ce qu'on a obtenu précedemment avec la méthode de maximum de vraissemblance dans le cas de Frechet où gamma est positif.      Sur le graphique en bas à droite on voit que tous les points sont dans l'intervalle de confiance, on a un bon ajustement de notre modèle aux données. Sur les graphiques en haut à gauche et en bas à gauche , on a un bon ajustement de modèle aux données.
+```{r}
+
+```
+## Return Level Plot, il va nous permettre de prédire les quantités extremes
+```{r}
+ci(FitxMle,type="return.level",return.period =200)
+ci(FitxGumbelMle,type="return.level",return.period = 200)
+ci(FitxMoments,type="return.level",return.period = 200)
+return.level(FitxMoments, return.period = c(100,200,300,1000))
+```
+
+# Dans le cas de Gumbel le niveau de retour à 200 ans est de 446.393, c'est legérement en dessous de maximum de notre jeux des données et l'intervalle de confiance est beaucoup plus pétit.
+```{r}
+
+```
+## Résumé GEV
+```{r}
+library(knitr)
+library(kableExtra)
+Tableaux1=data.frame(dataset=c("ftcanmax GEV","ftcanmax GEV"),Method_estimation=c("Mle","Moments"),Fréchet=c(597.437,560.302),
+                Gumbel=c(446.393,"X"), Weibull=c("X","X"))
+kable(Tableaux1,format = "simple",align = "lclrr")
+summary(ftcanmax$Prec)
+```
+
+# Le tabeaux ci-dessus illustre le résumé de niveau de rétour pour une période de rétour de 200 ans, par la méthode maximum de vraissemblance et par la méthode de moments.
+```{r}
+
+```
+## II) GPD:Generalized Pareto Distribution
+```{r}
+#choix de seuil
+u=160
+ftcanmax$Prec[ftcanmax$Prec>u]
+length(ftcanmax$Prec[ftcanmax$Prec>u])
+```
+# On a 49 valeurs qui sont supérieures au seuil u=160.
+```{r}
+plot(ftcanmax$Prec,type="h",col="blue")
+abline(h=160, col="red",lwd=2)
+```
+
+# On a choisit un seuil ni trop grand, ni trop petit, cela nous permettra de faire un compromis de biais-variance. 
+```{r}
+mrlplot(ftcanmax$Prec)
+```
+
+# On a choisit un seuil de u=160 sur la partie linéaire entre 150 et 190 de la courbe du milieu.
+```{r}
+# methode de maximum de vraissemblance
+#Fréchet
+FitxthreshMle=fevd(x,threshold=160,type="GP",method="MLE",time.units="4/year")
+FitxthreshMle
+plot(FitxthreshMle)
+```
+
+# Sur le graphique en bas à droite, on remarque que tous les points sont dans l'intervalle de confiance et assez bien alignés sur la courbe, on a un bon ajustement de notre modèle à nos données.Sur les graphiques en haut à gauche et en bas à gauche on voit un bon ajustement de notre modèle à nos données à part quelques points sous estimés.
+```{r}
+# return level plot
+ci(FitxthreshMle,type="return.level",return.period = 200)
+```
+# on voit que l'intervalle de confiance est assez grand.
+```{r}
+# Gumbel 
+FitxthreshExpMle=fevd(x,threshold=160,type="Exponential",
+                      method="MLE",time.units="4/year")
+FitxthreshExpMle
+plot(FitxthreshExpMle)
+```
+
+# Sur le graphique en bas à droite, on voit que tous les points sont dans l'intervalle de confiance et assez bien alignés sur la courbe, on a un bon ajustement de notre modèle à nos données . sur les graphiques en haut à gauche et en bas à gauche on voit un bon ajustement de notre modèle à nos données à part quelques points sous estimés.
+```{r}
+# return level plot
+ci(FitxthreshExpMle,type="return.level",return.period = 200)
+```
+# On voit que l'intervalle de confiance est moins grand que celui de Fréchet.
+```{r}
+# methode de moment
+FitxthreshMoments=fevd(x,threshold=160,type="GP",method="Lmoments",time.units="4/year")
+FitxthreshMoments
+plot(FitxthreshMoments)
+```
+
+
+# En regardant le graphique ci -dessus: sur celui d'en bas à droite, tous les points sont dans l'intervalle de confiance et assez bien alignés sur la courbe, on a un bon ajustement de notre modèle à nos données.Sur celui d'en haut à gauche et celui d'en bas à gauche on voit un bon ajustement de notre modèle à nos données à part quelques points sous estimés.
+```{r}
+# return level plot
+ci(FitxthreshMoments,type="return.level",return.period = 200)
+```
+# Résumé GP
+```{r}
+Tableaux2=data.frame(dataset=c("ftcanmax GP","ftcanmax GP"), Max=463,Method_of_estimation=c("Mle","Moments"),Fréchet=c(612.646,657.323),
+                     Gumbel=c(628.196,"X"))
+kable(Tableaux2,format = "simple")
+```
+
+
+
+```{r}
+```
+# Comparaison :GEV et GP
+```{r}
+Tableaux3=data.frame(dataset=c("ftcanmax GEV","ftcanmax GEV","ftcanmax GP","ftcanmax GP"), Max=463,Method_of_estimation=c("Mle","Moments","Mle","Moments"),Fréchet=c(597.437,560.302,612.646,657.323),
+                     Gumbel=c(446.393,"X",628.196,"X"), Weibull=c("X","X"))
+kable(Tableaux3,format = "simple")
+```
